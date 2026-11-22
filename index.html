@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Padel Academy Booking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Jost:wght@400;500;600&display=swap">
+<style>
+/* Layout: olive brand bar, two-step player flow (activities → book); each session is a card whose rows are its courts, 4 players per court */
+:root{
+  --bg:#EFEFE7; --surface:#FBFBF7; --ink:#1C1E12; --muted:#5F6350; --line:#D9DACB;
+  --accent:#4B5530; --accent-ink:#F5F2E8; --accent-soft:#E3E6D3;
+  --warn:#9A5206; --warn-soft:#FBEEDD; --danger:#B42318; --danger-soft:#FBE4E1;
+  --court:#E8EBDB; --court-line:#AEB58F;
+  --bar:#2B2D18; --bar-deep:#15160C; --bar-glow:#3D4027; --bar-ink:#F5F2E8; --bar-muted:#B5B79F; --bar-line:#4A4D33; --bar-accent:#D3D8B4;
+  --f-display:"Playfair Display",Georgia,"Times New Roman",serif;
+  --f-body:Jost,"Century Gothic",system-ui,-apple-system,sans-serif;
+  --r:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121309; --surface:#1B1D12; --ink:#EEEDE3; --muted:#A3A690; --line:#303322;
+  --accent:#BCC596; --accent-ink:#1A1C0F; --accent-soft:#2A2E1B;
+  --warn:#F0A453; --warn-soft:#33240F; --danger:#F27C70; --danger-soft:#3A1714;
+  --court:#23271A; --court-line:#4D5536; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#121309; --surface:#1B1D12; --ink:#EEEDE3; --muted:#A3A690; --line:#303322;
+  --accent:#BCC596; --accent-ink:#1A1C0F; --accent-soft:#2A2E1B;
+  --warn:#F0A453; --warn-soft:#33240F; --danger:#F27C70; --danger-soft:#3A1714;
+  --court:#23271A; --court-line:#4D5536; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;min-height:100vh}
+[hidden]{display:none!important}
+img{max-width:100%}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:900px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;letter-spacing:0;text-wrap:balance;margin:0}
+h1{font-size:clamp(32px,6.5vw,46px);line-height:1.05}
+h2{font-size:24px;line-height:1.15}
+h3{font-size:19px;line-height:1.2}
+p{margin:0}
+.muted{color:var(--muted)}
+.fine{font-size:12.5px;color:var(--muted)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* loading screen */
+#loader{position:fixed;inset:0;z-index:100;background:radial-gradient(ellipse at 50% 42%,var(--bar-glow) 0%,var(--bar) 45%,var(--bar-deep) 100%);color:var(--bar-ink);display:grid;place-items:center;
+  padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px));transition:opacity .35s ease}
+#loader.out{opacity:0;pointer-events:none}
+.ld{display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}
+.ld-badge{width:min(240px,62vw);height:auto;aspect-ratio:1/1;display:block}
+.ld-court{position:relative;width:180px;height:56px}
+.ld-court .floor{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--bar-line)}
+.ld-court .net{position:absolute;left:50%;bottom:0;width:2px;height:22px;background:var(--bar-muted);transform:translateX(-1px)}
+.ld-ball{position:absolute;left:0;bottom:2px;width:14px;height:14px;border-radius:50%;background:var(--bar-accent)}
+.ld-bar{width:180px;height:3px;border-radius:2px;background:var(--bar-line);overflow:hidden}
+.ld-bar i{display:block;height:100%;width:100%;background:var(--bar-accent);transform-origin:left;transform:scaleX(1)}
+.ld-msg{font-size:13px;color:var(--bar-muted);letter-spacing:.04em}
+@media (prefers-reduced-motion:no-preference){
+  .ld-ball{animation:rally 1.1s ease-in-out infinite alternate}
+  .ld-bar i{animation:fill 1.6s ease-out forwards}
+  @keyframes rally{0%{transform:translate(0,0)}25%{transform:translate(41px,-36px)}50%{transform:translate(83px,-4px)}75%{transform:translate(124px,-34px)}100%{transform:translate(166px,0)}}
+  @keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+}
+
+/* bar */
+.bar{background:var(--bar);color:var(--bar-ink);position:sticky;top:0;z-index:5;padding-top:env(safe-area-inset-top,0px)}
+.bar-in{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding-block:8px}
+.brand{display:flex;align-items:center;gap:12px;font-family:var(--f-body);font-weight:500;font-size:14px;letter-spacing:.3em;text-transform:uppercase;min-width:0;background:none;border:0;color:var(--bar-ink);cursor:pointer;padding:0}
+.brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand img{flex:none;height:32px;width:auto}
+.barbtn{background:transparent;border:1px solid var(--bar-line);color:var(--bar-ink);border-radius:8px;padding:5px 11px;cursor:pointer;font-size:13px;white-space:nowrap}
+.barbtn:hover{border-color:var(--bar-accent)}
+.barbtns{display:flex;gap:6px;flex:none}
+
+/* sign in */
+.signin{min-height:100vh;background:radial-gradient(ellipse at 50% 30%,var(--bar-glow) 0%,var(--bar) 45%,var(--bar-deep) 100%);display:grid;place-items:center;
+  padding-block:calc(32px + env(safe-area-inset-top,0px)) calc(32px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.signwrap{width:min(400px,100%);display:flex;flex-direction:column;align-items:center;gap:22px}
+.signbadge{width:150px;height:150px}
+.signcard{width:100%;background:var(--surface);border-radius:14px;padding:24px 22px;display:flex;flex-direction:column;gap:16px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.signcard h1{font-size:32px}
+.pw{position:relative}
+.pw input{padding-right:64px}
+.pw .link{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:13px}
+.err{color:var(--danger);font-size:14px}
+.ok-note{background:var(--accent-soft);color:var(--accent);padding:10px 12px;border-radius:8px;font-size:14px;font-weight:500}
+.opt-l{text-transform:none;letter-spacing:0;font-weight:400}
+textarea{min-height:84px;resize:vertical;font:inherit;color:inherit}
+.feed{display:flex;flex-direction:column;gap:10px}
+.msg{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;max-width:620px;width:fit-content;min-width:min(260px,100%);display:flex;flex-direction:column;gap:4px}
+.msg.mine{align-self:flex-end;background:var(--accent-soft);border-color:transparent}
+.msg.unread{border-left:3px solid var(--accent)}
+.msg-h{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.msg-h .who{font-weight:600}
+.msg p{overflow-wrap:anywhere}
+.msg-f{display:flex;gap:12px;align-items:center}
+.compose{display:flex;flex-direction:column;gap:8px}
+.badge{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:9px;background:var(--bar-accent);color:var(--bar);font-size:11px;font-weight:600;padding:0 5px;margin-left:6px}
+svg.courts .k{fill:var(--ink)}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.role{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;font-weight:500}
+.role:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.role input{accent-color:var(--accent);margin:0;width:16px;height:16px}
+.demo-code{border:1px dashed var(--warn);background:var(--warn-soft);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.demo-code .lbl{color:var(--warn)}
+.code{font-family:var(--f-display);font-size:30px;letter-spacing:.2em;font-variant-numeric:tabular-nums;line-height:1.1}
+.codein{font-size:22px;letter-spacing:.3em;text-align:center;font-variant-numeric:tabular-nums}
+.btn.wide{justify-content:center;width:100%;padding-block:11px}
+.btn:disabled{opacity:.7;cursor:progress}
+input[type=password]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;min-width:0}
+@media (max-width:480px){.brand span{display:none}}
+.proto{background:var(--accent-soft);color:var(--ink);font-size:12.5px;padding-block:6px;text-align:center}
+main{padding-block:24px calc(64px + env(safe-area-inset-bottom,0px))}
+.stack{display:flex;flex-direction:column;gap:20px}
+
+/* steps */
+.steps{display:flex;gap:6px;list-style:none;margin:0;padding:0;flex-wrap:wrap}
+.steps li{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.steps li+li::before{content:"";width:18px;height:1px;background:var(--line);margin-right:2px}
+.steps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);font-size:11px;font-variant-numeric:tabular-nums}
+.steps li.done b{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.steps li.cur{color:var(--ink)}
+.steps li.cur b{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+.hero{display:flex;flex-direction:column;gap:10px}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lead{max-width:60ch;color:var(--muted);font-size:16px}
+.back{align-self:flex-start;background:none;border:0;padding:0;color:var(--accent);font-weight:600;cursor:pointer;font-size:14px}
+
+/* activity options */
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.opt{display:flex;flex-direction:column;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+button.opt{cursor:pointer;border-width:2px;border-color:var(--accent)}
+button.opt:hover{background:var(--accent-soft)}
+.opt.off{color:var(--muted)}
+.opt.off h2{color:var(--muted)}
+.opt .meta{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.opt .go{margin-top:auto;font-weight:600;color:var(--accent)}
+.opt svg .c{fill:var(--court);stroke:var(--court-line)}
+.opt svg .n{stroke:var(--court-line)}
+.opt svg .p{fill:var(--accent)}
+.opt.off svg .p{fill:var(--muted)}
+
+/* buttons, pills */
+.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{filter:brightness(1.07)}
+.btn.sm{padding:6px 12px;font-size:14px}
+.btn.outline{background:transparent;color:var(--accent)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.link{background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-weight:500;font-size:13.5px}
+.link.danger{color:var(--danger)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;border-radius:999px;padding:3px 10px;background:var(--bg);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.pill.ok{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.pill.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.lv{font-family:var(--f-body);font-weight:600;font-size:12.5px;letter-spacing:.06em;border:1px solid var(--line);border-radius:5px;padding:1px 7px;color:var(--ink);white-space:nowrap}
+.lv.big{font-size:15px;padding:2px 9px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+input[type=text],input[type=email],input[type=tel],input[type=number],input[type=time],input[type=date],select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;min-width:0}
+
+/* me card */
+.me{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px 28px;align-items:start}
+.lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.me-name{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:600;font-size:26px;line-height:1.2}
+.myslots{display:flex;flex-direction:column;gap:6px;margin:4px 0 0;padding:0;list-style:none}
+.myslots li{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-variant-numeric:tabular-nums}
+.myslots li b{min-width:92px}
+.notice{border-left:3px solid var(--warn);background:var(--warn-soft);padding:12px 14px;border-radius:0 8px 8px 0}
+.switch{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;flex-wrap:wrap;align-self:flex-start}
+.switch input{width:18px;height:18px;accent-color:var(--accent);margin:0}
+
+/* sessions and courts */
+.day{display:flex;flex-direction:column;gap:8px}
+.dayhead{font-family:var(--f-body);font-weight:600;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding-top:6px}
+.sess{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.sess.locked{background:transparent;border-style:dashed}
+.sess.locked .sess-h{opacity:.55}
+.sess-h{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;padding:14px 16px;align-items:center}
+.when{display:flex;flex-direction:column;white-space:nowrap;min-width:76px}
+.when .t{font-family:var(--f-display);font-weight:600;font-size:21px;line-height:1;font-variant-numeric:tabular-nums}
+.when .d{font-size:12.5px;color:var(--muted);margin-top:4px}
+.info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.meta{font-size:13.5px;color:var(--muted)}
+.courtlist{border-top:1px solid var(--line)}
+.court{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px 14px;align-items:center;padding:11px 16px}
+.court+.court{border-top:1px solid var(--line)}
+.court.locked .cinfo,.court.locked svg{opacity:.5}
+.cinfo{display:flex;flex-direction:column;gap:1px;min-width:0}
+.cinfo b{font-weight:600}
+.acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.acts select{width:auto;max-width:180px;padding:6px 9px;font-size:13.5px}
+svg.courts{flex:none}
+svg.courts .c{fill:var(--court);stroke:var(--court-line)}
+svg.courts .net{stroke:var(--court-line)}
+svg.courts .p{fill:var(--accent)}
+svg.courts .e{fill:none;stroke:var(--muted);stroke-width:1.2}
+.cnames{grid-column:2/-1;display:flex;flex-direction:column;gap:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;font-size:13.5px;background:var(--bg)}
+.chip .x{background:none;border:0;cursor:pointer;color:var(--muted);width:22px;height:22px;border-radius:50%;font-size:15px;line-height:1}
+.chip .x:hover{background:var(--danger-soft);color:var(--danger)}
+
+/* coach */
+.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line)}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:10px 10px 8px;cursor:pointer;font-weight:500;color:var(--muted);white-space:nowrap}
+.tab[aria-current="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar .sp{flex:1}
+.toolbar select{width:auto}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+tr:last-child td{border-bottom:0}
+td select{width:auto;padding:5px 8px}
+form.addp{display:grid;grid-template-columns:minmax(0,2fr) minmax(90px,1fr) auto;gap:8px;align-items:end}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.slotcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.slotcard .g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ccfg{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-top:10px;border-top:1px solid var(--line)}
+.ccfg b{min-width:60px}
+.checks{display:flex;flex-wrap:wrap;gap:4px 12px}
+.checks label{display:flex;gap:4px;align-items:center;font-weight:600;font-size:14px;cursor:pointer}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--danger-soft);padding:8px 10px;border-radius:8px;font-size:14px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:30;max-width:calc(100vw - 32px)}
+
+@media (max-width:640px){
+  .when .t{font-size:19px}
+  .me{grid-template-columns:minmax(0,1fr)}
+  .court{padding:11px 12px;gap:8px 10px}
+  .acts{flex-direction:column;align-items:flex-end}
+  .cnames{grid-column:1/-1}
+  form.addp{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  form.addp .field:first-child{grid-column:1/-1}
+}
+</style>
+</head>
+<body>
+
+<div id="loader" role="status" aria-live="polite">
+  <div class="ld">
+    <img class="ld-badge" src="badge.png" alt="CM Padel Academy" width="240" height="240">
+    <div class="ld-court" aria-hidden="true"><span class="floor"></span><span class="net"></span><span class="ld-ball"></span></div>
+    <div class="ld-bar" aria-hidden="true"><i></i></div>
+    <div class="ld-msg">Loading sessions</div>
+  </div>
+</div>
+
+<div id="app"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  sendEmailVerification, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, query, where, setDoc, getDoc, getDocs, updateDoc, addDoc,
+  deleteDoc, runTransaction, writeBatch, arrayUnion } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+/* Your Firebase project (Firebase console → Project settings → Your apps). This is not a password: access is controlled by firestore.rules. */
+const firebaseConfig = {
+  apiKey: "AIzaSyB8NHtbEL4nkqxqXUVXS1nSjz-mkY7dazQ",
+  authDomain: "cmpadel-c0afc.firebaseapp.com",
+  projectId: "cmpadel-c0afc",
+  storageBucket: "cmpadel-c0afc.firebasestorage.app",
+  messagingSenderId: "444507316259",
+  appId: "1:444507316259:web:d161c3cef8c8f504595196"
+};
+const fb=initializeApp(firebaseConfig), auth=getAuth(fb), db=getFirestore(fb);
+
+const LEVELS=['D-','D','D+','C-','C','C+'];
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const H=3600e3, DAY=24*H, WINDOW_DAYS=21, CANCEL_HOURS=12, PER_COURT=4, WAIT_MAX=4;
+const SYSTEM='system', ACADEMY='CM Padel Academy';
+
+/* Weekly group sessions created the first time a coach opens the app. Each court is its own group of 4 with its own levels. */
+const DEFAULT_SESSIONS=[
+  {id:'mon', title:'Ladies Academy', dow:1, time:'08:30', dur:90,  price:135, courts:[['D+'],['D+']]},
+  {id:'wed', title:'Ladies Academy', dow:3, time:'10:00', dur:90,  price:135, courts:[['D+'],['D+'],['C-','C']]},
+  {id:'fri', title:'High Performance Training', dow:5, time:'08:30', dur:120, price:135, courts:[['C','C+'],['C','C+']]},
+];
+
+/* ---------- helpers ---------- */
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const fmtDay=d=>new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'numeric',month:'short'}).format(d);
+const fmtTime=d=>new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit'}).format(d);
+const clock=t=>{const [h,m]=t.split(':').map(Number);const d=new Date();d.setHours(h,m,0,0);return fmtTime(d)};
+function span(w){const [h,m]=w.time.split(':').map(Number);const a=new Date();a.setHours(h,m,0,0);return `${fmtTime(a)} – ${fmtTime(new Date(a.getTime()+w.dur*60e3))}`}
+const weekOrder=w=>((w.dow+6)%7)*1440+(+w.time.slice(0,2))*60+(+w.time.slice(3,5));
+const byWeek=(a,b)=>weekOrder(a)-weekOrder(b);
+function dayLabel(ts){const d=new Date(ts);d.setHours(0,0,0,0);const t=new Date();t.setHours(0,0,0,0);const diff=Math.round((d-t)/DAY);
+  return (diff===0?'Today · ':diff===1?'Tomorrow · ':'')+fmtDay(d)}
+function range(levels){
+  const idx=(levels||[]).map(l=>LEVELS.indexOf(l)).filter(i=>i>=0).sort((a,b)=>a-b);
+  if(!idx.length) return 'No levels';
+  if(idx.length===LEVELS.length) return 'All levels';
+  return idx.map(i=>LEVELS[i]).join('/');
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,3600)}
+const LOCK='<svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true"><rect x="1" y="5" width="9" height="7" rx="1.5" fill="currentColor"/><path d="M3 5V3.5a2.5 2.5 0 0 1 5 0V5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+const stamp=ts=>{const d=new Date(ts);return `${new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short'}).format(d)}, ${fmtTime(d)}`};
+const nl=s=>esc(s).replace(/\n/g,'<br>');
+function friendly(e){
+  const c=e?.code||'';
+  const map={
+    'auth/invalid-credential':'That email and password don\'t match. Check both and try again.',
+    'auth/wrong-password':'That email and password don\'t match. Check both and try again.',
+    'auth/user-not-found':'That email and password don\'t match. Check both and try again.',
+    'auth/invalid-email':'Enter a valid email address, like name@example.com.',
+    'auth/missing-email':'Enter your email address.',
+    'auth/email-already-in-use':'An account with this email already exists. Sign in instead.',
+    'auth/weak-password':'Use at least 8 characters for your password.',
+    'auth/too-many-requests':'Too many attempts. Wait a few minutes, then try again.',
+    'auth/network-request-failed':'No internet connection. Check it and try again.',
+    'permission-denied':'You don\'t have permission to do that. If this keeps happening, ask your coach.',
+    'unavailable':'Can\'t reach the server right now. Check your internet and try again.'
+  };
+  return map[c]||'Something went wrong. Try again in a moment.';
+}
+
+/* ---------- state ---------- */
+const S={weekly:[],book:{},users:[],matches:[],messages:[]};
+let me=null, unsubs=[], profileUnsub=null, seeded=false;
+const marking=new Set();
+const view={screen:'boot',tab:'sessions',filter:'all',confirm:null,showLocked:true,msgTo:'all',note:null,noteKind:'ok',prefill:''};
+const isCoach=p=>p?.role==='coach';
+const P=id=>id&&me&&id===me.id?me:S.users.find(u=>u.id===id);
+const W=id=>S.weekly.find(w=>w.id===id);
+const MATCH=id=>S.matches.find(m=>m.id===id);
+
+function occurrences(){
+  const now=Date.now(), end=now+WINDOW_DAYS*DAY, out=[], d0=new Date();d0.setHours(0,0,0,0);
+  for(let i=0;i<=WINDOW_DAYS;i++){
+    const d=new Date(d0);d.setDate(d0.getDate()+i);
+    for(const w of S.weekly) if(w.dow===d.getDay()&&w.time){
+      const [h,m]=w.time.split(':').map(Number);const s=new Date(d);s.setHours(h,m,0,0);const t=s.getTime();
+      if(t<=now||t>end) continue;
+      out.push({key:w.id+'@'+ymd(d),date:ymd(d),w,start:t});
+    }
+  }
+  return out.sort((a,b)=>a.start-b.start);
+}
+const ck=(o,i)=>o.key+'#'+i;
+const bid=(o,i)=>`${o.w.id}_${o.date}_${i}`;
+const peek=k=>S.book[k]||{in:[],wait:[],up:[]};
+const occ=key=>occurrences().find(o=>o.key===key);
+const fits=(c,p)=>!!p&&!!p.level&&(c.levels||[]).includes(p.level);
+const hoursTo=o=>(o.start-Date.now())/H;
+function whereIs(o,pid){
+  for(let i=0;i<o.w.courts.length;i++){const e=peek(ck(o,i));if(e.in.includes(pid))return{i,state:'in'};if(e.wait.includes(pid))return{i,state:'wait'}}
+  return null;
+}
+const mStart=m=>{const [y,mo,d]=m.date.split('-').map(Number),[h,mi]=m.time.split(':').map(Number);return new Date(y,mo-1,d,h,mi).getTime()};
+const upcomingMatches=()=>S.matches.filter(m=>!m.cancelled&&mStart(m)>Date.now()).sort((a,b)=>mStart(a)-mStart(b));
+const mLabel=m=>`${m.title}, ${fmtDay(new Date(mStart(m)))} ${span(m)}`;
+const oLabel=(o,i)=>`Court ${i+1}, ${o.w.title}, ${fmtDay(new Date(o.start))} ${span(o.w)}`;
+function seesMsg(m,p){if(m.from===p.id)return true;const t=m.to||{};return t.type==='all'||(t.type==='levels'&&(t.levels||[]).includes(p.level))||(t.type==='player'&&t.id===p.id)}
+function unreadFor(p){
+  if(!p) return 0;
+  return isCoach(p)?S.messages.filter(m=>m.to?.type==='coaches'&&!(m.read||[]).includes(p.id)).length
+    :S.messages.filter(m=>m.from!==p.id&&seesMsg(m,p)&&!(m.read||[]).includes(p.id)).length;
+}
+function toLabel(t){return t.type==='all'?'All students':t.type==='coaches'?'Coaches':t.type==='levels'?((t.levels||[]).length>1?'Levels ':'Level ')+range(t.levels):esc(t.name||P(t.id)?.name||'a student')}
+const senderName=m=>m.from===SYSTEM?ACADEMY:(m.fromName||P(m.from)?.name||'Coach');
+
+/* ---------- live data from Firestore ---------- */
+function stopData(){unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[];S.weekly=[];S.book={};S.users=[];S.matches=[];S.messages=[]}
+function listen(q,cb){unsubs.push(onSnapshot(q,cb,err=>{console.error(err);toast(friendly(err))}))}
+function startData(){
+  stopData();
+  listen(collection(db,'weekly'),snap=>{
+    S.weekly=snap.docs.map(d=>({id:d.id,...d.data()})).map(w=>({...w,courts:w.courts||[]}));
+    if(isCoach(me)&&!snap.size&&!seeded&&!snap.metadata?.fromCache){seeded=true;seedWeekly()}
+    refresh();
+  });
+  listen(query(collection(db,'bookings'),where('date','>=',ymd(new Date()))),snap=>{
+    S.book={};snap.docs.forEach(d=>{const x=d.data();S.book[`${x.wid}@${x.date}#${x.court}`]={in:x.in||[],wait:x.wait||[],up:x.up||[]}});refresh();
+  });
+  listen(collection(db,'matches'),snap=>{S.matches=snap.docs.map(d=>({id:d.id,...d.data()})).map(m=>({...m,in:m.in||[],wait:m.wait||[],up:m.up||[]}));refresh()});
+  if(isCoach(me)){
+    listen(collection(db,'users'),snap=>{S.users=snap.docs.map(d=>({id:d.id,...d.data()}));refresh()});
+    listen(collection(db,'messages'),snap=>{S.messages=snap.docs.map(d=>({id:d.id,...d.data()}));refresh()});
+  }else{
+    const parts={pub:[],mine:[]};
+    const merge=()=>{const m=new Map();[...parts.pub,...parts.mine].forEach(x=>m.set(x.id,x));S.messages=[...m.values()];refresh()};
+    listen(query(collection(db,'messages'),where('private','==',false)),snap=>{parts.pub=snap.docs.map(d=>({id:d.id,...d.data()}));merge()});
+    listen(query(collection(db,'messages'),where('audience','array-contains','u:'+me.id)),snap=>{parts.mine=snap.docs.map(d=>({id:d.id,...d.data()}));merge()});
+  }
+}
+async function seedWeekly(){
+  const b=writeBatch(db);
+  DEFAULT_SESSIONS.forEach(s=>b.set(doc(db,'weekly',s.id),{title:s.title,dow:s.dow,time:s.time,dur:s.dur,price:s.price,courts:s.courts.map(l=>({levels:l}))}));
+  try{await b.commit();toast('Weekly sessions set up: Monday, Wednesday and Friday.')}catch(e){seeded=false;toast(friendly(e))}
+}
+
+/* ---------- sign-in state ---------- */
+onAuthStateChanged(auth,async u=>{
+  if(profileUnsub){profileUnsub();profileUnsub=null}
+  stopData();me=null;
+  if(!u){if(!['signup','forgot'].includes(view.screen))view.screen='signin';render();hideLoader();return}
+  if(!u.emailVerified){view.screen='verify';render();hideLoader();return}
+  await enter(u);
+});
+async function enter(u){
+  if(profileUnsub){profileUnsub();profileUnsub=null}
+  const ref=doc(db,'users',u.uid);
+  try{
+    const snap=await getDoc(ref);
+    if(!snap.exists()) await setDoc(ref,{name:u.email.split('@')[0],email:u.email,phone:'',role:'student',level:null,wantsCoach:false,createdAt:Date.now()});
+  }catch(e){console.error(e);view.note=friendly(e);view.noteKind='err';view.screen='signin';await signOut(auth);return}
+  let first=true,lastRole=null;
+  profileUnsub=onSnapshot(ref,s=>{
+    if(!s.exists())return;
+    me={id:u.uid,...s.data()};
+    if(first||me.role!==lastRole){
+      lastRole=me.role;startData();
+      view.screen=isCoach(me)?'coach':'training';view.tab='sessions';view.note=null;
+      first=false;render();window.scrollTo(0,0);
+    }else refresh();
+    hideLoader();
+  },err=>{console.error(err);toast(friendly(err))});
+}
+
+/* ---------- writes ---------- */
+function promoteE(e,cap){const moved=[];while(e.in.length<cap&&e.wait.length){const id=e.wait.shift();e.in.push(id);e.up.push(id);moved.push(id)}return moved}
+async function courtTx(o,i,fn){
+  const ref=doc(db,'bookings',bid(o,i));
+  return runTransaction(db,async tx=>{
+    const s=await tx.get(ref), d=s.exists()?s.data():{};
+    const e={in:[...(d.in||[])],wait:[...(d.wait||[])],up:[...(d.up||[])]};
+    const res=fn(e)||{};
+    if(res.ok) tx.set(ref,{wid:o.w.id,date:o.date,court:i,in:e.in,wait:e.wait,up:e.up});
+    return res;
+  });
+}
+async function matchTx(m,fn){
+  const ref=doc(db,'matches',m.id);
+  return runTransaction(db,async tx=>{
+    const s=await tx.get(ref);if(!s.exists())return {msg:'This match no longer exists.'};
+    const d=s.data(), e={in:[...(d.in||[])],wait:[...(d.wait||[])],up:[...(d.up||[])],spots:d.spots,cancelled:d.cancelled};
+    const res=fn(e)||{};
+    if(res.ok) tx.update(ref,{in:e.in,wait:e.wait,up:e.up});
+    return res;
+  });
+}
+/* Messages a coach's actions send automatically. Students can't send these, so only coach actions trigger them. */
+async function notify(uid,text){
+  if(!isCoach(me)||!uid) return;
+  try{await addDoc(collection(db,'messages'),{from:SYSTEM,fromName:ACADEMY,by:me.id,private:true,audience:['u:'+uid],to:{type:'player',id:uid,name:P(uid)?.name||''},text,at:Date.now(),read:[]})}
+  catch(e){console.error(e)}
+}
+async function run(promise){try{const r=await promise;if(r?.msg)toast(r.msg);return r}catch(e){console.error(e);toast(friendly(e))}}
+
+function bookCourt(o,i){
+  if(!fits(o.w.courts[i],me)) return toast('This court is not open to your level.');
+  const w=whereIs(o,me.id);if(w) return toast(`You're already on Court ${w.i+1} for this session.`);
+  return run(courtTx(o,i,e=>{
+    if(e.in.includes(me.id)||e.wait.includes(me.id)) return {msg:'You\'re already on this court.'};
+    if(e.in.length<PER_COURT){e.in.push(me.id);return {ok:1,msg:`Booked: ${oLabel(o,i)}`}}
+    if(e.wait.length<WAIT_MAX){e.wait.push(me.id);return {ok:1,msg:`Court ${i+1} is full. You're #${e.wait.length} of ${WAIT_MAX} on the waitlist.`}}
+    return {msg:`Court ${i+1} and its waitlist are full.`};
+  }));
+}
+function cancelCourt(o,i){
+  if(hoursTo(o)<CANCEL_HOURS) return toast(`Cancellations close ${CANCEL_HOURS} hours before the start. Message your coach.`);
+  return run(courtTx(o,i,e=>{e.in=e.in.filter(x=>x!==me.id);e.up=e.up.filter(x=>x!==me.id);promoteE(e,PER_COURT);return {ok:1,msg:'Booking cancelled.'}}));
+}
+function leaveCourt(o,i){return run(courtTx(o,i,e=>{e.wait=e.wait.filter(x=>x!==me.id);return {ok:1,msg:'Left the waitlist.'}}))}
+async function coachAdd(o,i,uid){
+  const p=P(uid);
+  const r=await run(courtTx(o,i,e=>{
+    if(e.in.includes(uid)||e.wait.includes(uid)) return {msg:`${p?.name} is already on this court.`};
+    if(e.in.length<PER_COURT){e.in.push(uid);return {ok:1,booked:1,msg:`${p?.name} added to Court ${i+1}.`}}
+    if(e.wait.length<WAIT_MAX){e.wait.push(uid);return {ok:1,msg:`Court ${i+1} is full. ${p?.name} added to its waitlist.`}}
+    return {msg:`Court ${i+1} and its waitlist are full.`};
+  }));
+  if(r?.booked) notify(uid,`${me.name} booked you on ${oLabel(o,i)}.`);
+}
+async function coachRemove(o,i,uid){
+  const p=P(uid);let moved=[];
+  const r=await run(courtTx(o,i,e=>{e.in=e.in.filter(x=>x!==uid);e.wait=e.wait.filter(x=>x!==uid);e.up=e.up.filter(x=>x!==uid);moved=promoteE(e,PER_COURT);return {ok:1,msg:`${p?.name} removed from Court ${i+1}.`}}));
+  if(r?.ok){notify(uid,`${me.name} removed you from ${oLabel(o,i)}.`);moved.forEach(id=>notify(id,`A spot opened on ${oLabel(o,i)}. You've moved up from the waitlist and are now booked.`))}
+}
+function bookMatch(m){
+  if(!m.levels.includes(me.level)) return toast('This match is not open to your level.');
+  return run(matchTx(m,e=>{
+    if(e.cancelled) return {msg:'This match has been cancelled.'};
+    if(e.in.includes(me.id)||e.wait.includes(me.id)) return {msg:'You\'re already on this match.'};
+    if(e.in.length<e.spots){e.in.push(me.id);return {ok:1,msg:`Booked: ${mLabel(m)}`}}
+    if(e.wait.length<WAIT_MAX){e.wait.push(me.id);return {ok:1,msg:`Match full. You're #${e.wait.length} of ${WAIT_MAX} on the waitlist.`}}
+    return {msg:'This match and its waitlist are full.'};
+  }));
+}
+function cancelMatch(m){
+  if((mStart(m)-Date.now())/H<CANCEL_HOURS) return toast(`Cancellations close ${CANCEL_HOURS} hours before the start. Message your coach.`);
+  return run(matchTx(m,e=>{e.in=e.in.filter(x=>x!==me.id);e.up=e.up.filter(x=>x!==me.id);promoteE(e,e.spots);return {ok:1,msg:'Booking cancelled.'}}));
+}
+function leaveMatch(m){return run(matchTx(m,e=>{e.wait=e.wait.filter(x=>x!==me.id);return {ok:1,msg:'Left the waitlist.'}}))}
+async function coachMatchAdd(m,uid){
+  const p=P(uid);
+  const r=await run(matchTx(m,e=>{
+    if(e.in.includes(uid)||e.wait.includes(uid)) return {msg:`${p?.name} is already on this match.`};
+    if(e.in.length<e.spots){e.in.push(uid);return {ok:1,booked:1,msg:`${p?.name} added.`}}
+    if(e.wait.length<WAIT_MAX){e.wait.push(uid);return {ok:1,msg:`Match full. ${p?.name} added to the waitlist.`}}
+    return {msg:'This match and its waitlist are full.'};
+  }));
+  if(r?.booked) notify(uid,`${me.name} booked you into ${mLabel(m)}.`);
+}
+async function coachMatchRemove(m,uid){
+  const p=P(uid);let moved=[];
+  const r=await run(matchTx(m,e=>{e.in=e.in.filter(x=>x!==uid);e.wait=e.wait.filter(x=>x!==uid);e.up=e.up.filter(x=>x!==uid);moved=promoteE(e,e.spots);return {ok:1,msg:`${p?.name} removed.`}}));
+  if(r?.ok){notify(uid,`${me.name} removed you from ${mLabel(m)}.`);moved.forEach(id=>notify(id,`A spot opened in ${mLabel(m)}. You've moved up from the waitlist and are now booked.`))}
+}
+async function deleteBookings(wid,court){
+  const q=court==null?query(collection(db,'bookings'),where('wid','==',wid)):query(collection(db,'bookings'),where('wid','==',wid),where('court','==',court));
+  const snap=await getDocs(q);const b=writeBatch(db);snap.docs.forEach(d=>b.delete(doc(db,'bookings',d.id)));await b.commit();
+}
+function markRead(list){
+  list.forEach(m=>{if(marking.has(m.id))return;marking.add(m.id);updateDoc(doc(db,'messages',m.id),{read:arrayUnion(me.id)}).catch(e=>{console.error(e);marking.delete(m.id)})});
+}
+
+/* ---------- pieces ---------- */
+function courtSvg(n){
+  let s='<svg class="courts" width="38" height="26" viewBox="0 0 38 26" aria-hidden="true"><rect class="c" x="1" y="1" width="36" height="24" rx="2"/><line class="net" x1="19" y1="1" x2="19" y2="25"/>';
+  [[10,8],[10,18],[28,8],[28,18]].forEach(([x,y],k)=>s+=`<circle class="${k<n?'p':'e'}" cx="${x}" cy="${y}" r="3.6"/>`);
+  return s+'</svg>';
+}
+const spots=e=>{const left=PER_COURT-e.in.length;return left>0?`${left} of ${PER_COURT} spots left`:`Full · waitlist ${e.wait.length} of ${WAIT_MAX}`};
+function optIcon(kind){
+  const dots={group:[[9,8],[9,18],[27,8],[27,18]],private:[[9,13],[27,13]],match:[[9,8],[9,18],[27,8],[27,18]]}[kind];
+  const n=kind==='group'?2:1;
+  let s=`<svg width="${n*40-2}" height="26" viewBox="0 0 ${n*40-2} 26" aria-hidden="true">`;
+  for(let i=0;i<n;i++){const x=i*40+1;s+=`<rect class="c" x="${x}" y="1" width="36" height="24" rx="2"/><line class="n" x1="${x+18}" y1="1" x2="${x+18}" y2="25"/>`+dots.map(([dx,dy])=>`<circle class="p" cx="${x+dx}" cy="${dy}" r="3.4"/>`).join('')}
+  return s+'</svg>';
+}
+function header(){
+  const n=unreadFor(me);
+  return `<header class="bar"><div class="bar-in wrap gut">
+    <button class="brand" data-act="home" aria-label="CM Padel Academy, back to start"><img src="mono.png" alt="" width="45" height="32"><span>Padel Academy</span></button>
+    <div class="barbtns">${isCoach(me)?'':`<button class="barbtn" data-act="inbox">Messages${n?`<span class="badge" aria-label="${n} unread">${n}</span>`:''}</button>`}<button class="barbtn" data-act="signout">Sign out</button></div>
+  </div></header>
+  <div class="proto gut">Signed in as ${esc(me.name)} · ${isCoach(me)?'Coach':me.level?'Level '+me.level:'level not set yet'}</div>`;
+}
+function steps(cur){
+  return `<ol class="steps" aria-label="Booking steps">${['Activities','Book'].map((l,i)=>`<li class="${i+1<cur?'done':''} ${i+1===cur?'cur':''}" ${i+1===cur?'aria-current="step"':''}><b>${i+1}</b>${l}</li>`).join('')}</ol>`;
+}
+function dayList(list,cardFn,empty){
+  if(!list.length) return `<div class="notice">${empty}</div>`;
+  const groups=new Map();
+  for(const o of list){const k=new Date(o.start).toDateString();if(!groups.has(k))groups.set(k,[]);groups.get(k).push(o)}
+  return [...groups.values()].map(g=>`<section class="day"><div class="dayhead">${dayLabel(g[0].start)}</div>${g.map(cardFn).join('')}</section>`).join('');
+}
+function sessCard(o,rows,locked=false){
+  const n=o.w.courts.length;
+  return `<article class="sess${locked?' locked':''}">
+    <div class="sess-h">
+      <div class="when"><span class="t">${fmtTime(new Date(o.start))}</span><span class="d">to ${fmtTime(new Date(o.start+o.w.dur*60e3))}</span></div>
+      <div class="info"><h3>${esc(o.w.title||'Group training')}</h3><div class="meta">${n} court${n>1?'s':''} · ${PER_COURT} players per court · AED ${o.w.price} per person</div></div>
+    </div>
+    <div class="courtlist">${rows}</div>
+  </article>`;
+}
+function courtRow(o,i,actions,locked=false,extra=''){
+  const c=o.w.courts[i], e=peek(ck(o,i));
+  return `<div class="court${locked?' locked':''}">
+    ${courtSvg(e.in.length)}
+    <div class="cinfo"><div class="row"><b>Court ${i+1}</b><span class="lv">${range(c.levels)}</span></div><span class="fine">${spots(e)}</span></div>
+    <div class="acts">${actions}</div>
+    ${extra}
+  </div>`;
+}
+const lockPill=()=>`<span class="pill">${LOCK}${me.level?`Not open to ${me.level}`:'Needs a level'}</span>`;
+
+/* ---------- student screens ---------- */
+function screenTraining(){
+  const days=[...new Set(S.weekly.slice().sort(byWeek).map(w=>DAYS[w.dow].slice(0,3)))].join(' · ');
+  const nm=upcomingMatches().filter(m=>m.levels.includes(me.level)).length;
+  return `<main class="gut"><div class="wrap stack">
+    ${steps(1)}
+    <div class="hero"><h1>Choose your activities</h1><p class="lead">Pick what you'd like to book.</p></div>
+    <div class="opts">
+      <button class="opt" data-act="go" data-s="group">
+        ${optIcon('group')}
+        <h2>Group training</h2>
+        <p class="muted">${[...new Set(S.weekly.map(w=>w.title))].map(esc).join(' and ')||'Coached sessions'}, with players at your level.</p>
+        <p class="meta">${S.weekly.length?`${days} · ${PER_COURT} players per court · AED ${Math.min(...S.weekly.map(w=>w.price))} per person`:'No sessions yet'}</p>
+        <span class="go">Choose group training</span>
+      </button>
+      <div class="opt off" aria-disabled="true">
+        ${optIcon('private')}
+        <h2>Private lessons</h2>
+        <p>One-to-one lessons with a coach.</p>
+        <span class="pill" style="align-self:flex-start;margin-top:auto">Coming soon</span>
+      </div>
+      <button class="opt" data-act="go" data-s="matches">
+        ${optIcon('match')}
+        <h2>Coach match</h2>
+        <p class="muted">Play a match with a coach on court.</p>
+        <p class="meta">${nm} upcoming for ${me.level||'your level'}</p>
+        <span class="go">Choose coach match</span>
+      </button>
+    </div>
+  </div></main>`;
+}
+function courtActions(o,i){
+  const e=peek(ck(o,i)), w=whereIs(o,me.id), d=`data-key="${o.key}" data-c="${i}"`;
+  if(w&&w.i===i&&w.state==='in')
+    return (e.up.includes(me.id)?'<span class="pill warn">Moved up from waitlist</span>':'')+'<span class="pill ok">Booked</span>'+
+      (hoursTo(o)>=CANCEL_HOURS?`<button class="btn ghost sm" data-act="cancel" ${d}>Cancel</button>`:'<span class="fine">Cancellation closed</span>');
+  if(w&&w.i===i) return `<span class="pill">#${e.wait.indexOf(me.id)+1} on waitlist</span><button class="btn ghost sm" data-act="leave" ${d}>Leave</button>`;
+  if(w) return '';
+  if(e.in.length>=PER_COURT) return e.wait.length>=WAIT_MAX?'<span class="pill">Waitlist full</span>':`<button class="btn outline sm" data-act="book" ${d}>Join waitlist</button>`;
+  return `<button class="btn sm" data-act="book" ${d}>Book</button>`;
+}
+function screenGroup(){
+  const all=occurrences(), mineAt=o=>o.w.courts.some(c=>fits(c,me));
+  const shown=view.showLocked?all:all.filter(mineAt);
+  const mine=S.weekly.filter(w=>w.courts.some(c=>fits(c,me))).sort(byWeek);
+  const booked=all.filter(o=>whereIs(o,me.id)?.state==='in').length;
+  const card=o=>sessCard(o,o.w.courts.map((c,i)=>fits(c,me)?courtRow(o,i,courtActions(o,i)):view.showLocked?courtRow(o,i,lockPill(),true):'').join(''),!mineAt(o));
+  return `<main class="gut"><div class="wrap stack">
+    ${steps(2)}
+    <button class="back" data-act="go" data-s="training">← Activities</button>
+    <div class="hero"><p class="eyebrow">Group training</p><h1>Book a court</h1></div>
+    <section class="me">
+      <div><div class="lbl">Playing as</div><div class="me-name">${esc(me.name)} ${me.level?`<span class="lv big">${me.level}</span>`:'<span class="pill warn">No level yet</span>'}</div>
+        <div class="fine">${booked} upcoming booking${booked===1?'':'s'}</div></div>
+      <div><div class="lbl">Your weekly sessions</div>
+        ${mine.length?`<ul class="myslots">${mine.map(w=>{const n=w.courts.filter(c=>fits(c,me)).length;return `<li><b>${DAYS[w.dow]}</b><span>${span(w)}</span><span class="fine">${esc(w.title)} · ${n} court${n>1?'s':''} for ${me.level}</span></li>`}).join('')}</ul>`:'<p class="muted" style="margin-top:4px">None yet</p>'}
+      </div>
+    </section>
+    <label class="switch"><input type="checkbox" id="showlocked" data-act="showlocked" ${view.showLocked?'checked':''}>Show courts I can't book <span class="pill warn">Testing</span></label>
+    ${mine.length?'':me.level?`<div class="notice"><b>There's no group court for ${me.level} yet.</b> Your coach will let you know when one opens.</div>`
+      :`<div class="notice"><b>Your coach hasn't set your level yet.</b> Once they do, the courts you can book will show here.</div>`}
+    ${mine.length||view.showLocked?dayList(shown,card,'No sessions for your level in the next three weeks.'):''}
+    <p class="fine">Each court is its own group of ${PER_COURT} players. Pick one court per session. Sessions open ${WINDOW_DAYS/7} weeks ahead. Free cancellation up to ${CANCEL_HOURS} hours before the start. If a court is full, join its waitlist (up to ${WAIT_MAX} people): when someone cancels, the first person waiting gets the spot automatically.</p>
+  </div></main>`;
+}
+function matchSvg(m){
+  const coach=m.spots<4;
+  let s='<svg class="courts" width="38" height="26" viewBox="0 0 38 26" aria-hidden="true"><rect class="c" x="1" y="1" width="36" height="24" rx="2"/><line class="net" x1="19" y1="1" x2="19" y2="25"/>';
+  [[10,8],[10,18],[28,8],[28,18]].forEach(([x,y],k)=>{
+    if(coach&&k===0){s+=`<rect class="k" x="${x-3.6}" y="${y-3.6}" width="7.2" height="7.2" rx="1.5"/>`;return}
+    const idx=coach?k-1:k;if(idx>=m.spots)return;
+    s+=`<circle class="${idx<m.in.length?'p':'e'}" cx="${x}" cy="${y}" r="3.6"/>`;
+  });
+  return s+'</svg>';
+}
+function matchCard(m,actions,locked=false,extra=''){
+  const s=mStart(m), left=m.spots-m.in.length;
+  return `<article class="sess${locked?' locked':''}">
+    <div class="sess-h">
+      <div class="when"><span class="t">${fmtTime(new Date(s))}</span><span class="d">to ${fmtTime(new Date(s+m.dur*60e3))}</span></div>
+      <div class="info"><h3>${esc(m.title)}</h3><div class="meta">With ${esc(m.byName||'a coach')} · AED ${m.price} per person</div></div>
+    </div>
+    <div class="courtlist"><div class="court${locked?' locked':''}">${matchSvg(m)}
+      <div class="cinfo"><div class="row"><b>${m.spots} player spot${m.spots>1?'s':''}</b><span class="lv">${range(m.levels)}</span></div><span class="fine">${left>0?`${left} of ${m.spots} spots left`:`Full · waitlist ${m.wait.length} of ${WAIT_MAX}`}</span></div>
+      <div class="acts">${actions}</div>${extra}</div></div>
+  </article>`;
+}
+function matchActions(m){
+  const d=`data-id="${m.id}"`;
+  if(m.in.includes(me.id)) return (m.up.includes(me.id)?'<span class="pill warn">Moved up from waitlist</span>':'')+'<span class="pill ok">Booked</span>'+
+    ((mStart(m)-Date.now())/H>=CANCEL_HOURS?`<button class="btn ghost sm" data-act="mcancel" ${d}>Cancel</button>`:'<span class="fine">Cancellation closed</span>');
+  const wi=m.wait.indexOf(me.id);
+  if(wi>=0) return `<span class="pill">#${wi+1} on waitlist</span><button class="btn ghost sm" data-act="mleave" ${d}>Leave</button>`;
+  if(m.in.length>=m.spots) return m.wait.length>=WAIT_MAX?'<span class="pill">Waitlist full</span>':`<button class="btn outline sm" data-act="mbook" ${d}>Join waitlist</button>`;
+  return `<button class="btn sm" data-act="mbook" ${d}>Book</button>`;
+}
+function screenMatches(){
+  const ok=m=>!!me.level&&m.levels.includes(me.level);
+  const list=upcomingMatches().filter(m=>view.showLocked||ok(m)).map(m=>({start:mStart(m),m}));
+  return `<main class="gut"><div class="wrap stack">
+    ${steps(2)}
+    <button class="back" data-act="go" data-s="training">← Activities</button>
+    <div class="hero"><p class="eyebrow">Coach match</p><h1>Play with a coach</h1><p class="lead">A coach joins the court and plays the match with you.</p></div>
+    <label class="switch"><input type="checkbox" id="showlocked" data-act="showlocked" ${view.showLocked?'checked':''}>Show matches I can't book <span class="pill warn">Testing</span></label>
+    ${me.level?'':'<div class="notice"><b>Your coach hasn\'t set your level yet.</b> Once they do, matches for your level will show here.</div>'}
+    ${dayList(list,o=>ok(o.m)?matchCard(o.m,matchActions(o.m)):matchCard(o.m,lockPill(),true),'No coach matches for your level yet. Your coaches will message you when one is added.')}
+    <p class="fine">Free cancellation up to ${CANCEL_HOURS} hours before the start. If a match is full, join the waitlist (up to ${WAIT_MAX} people): the first person waiting gets the next spot automatically.</p>
+  </div></main>`;
+}
+function msgEl(m,unread){
+  const mine=m.from===me.id;
+  return `<div class="msg${mine?' mine':''}${unread?' unread':''}">
+    <div class="msg-h"><span class="who">${mine?'You':esc(senderName(m))}</span>${m.from===SYSTEM?'<span class="pill">Automatic</span>':''}<span class="fine">${stamp(m.at)}</span></div>
+    <p>${nl(m.text)}</p>
+  </div>`;
+}
+function screenInbox(){
+  const msgs=S.messages.filter(m=>seesMsg(m,me)).sort((a,b)=>a.at-b.at);
+  const unread=msgs.filter(m=>m.from!==me.id&&!(m.read||[]).includes(me.id));
+  const ids=new Set(unread.map(m=>m.id));
+  markRead(unread);
+  return `<main class="gut"><div class="wrap stack">
+    <button class="back" data-act="go" data-s="training">← Activities</button>
+    <div class="hero"><p class="eyebrow">Messages</p><h1>From your coaches</h1></div>
+    <div class="feed">${msgs.map(m=>msgEl(m,ids.has(m.id))).join('')||'<p class="muted">No messages yet.</p>'}</div>
+    <form class="compose" id="reply"><label class="lbl" for="rp">Message your coaches</label><textarea id="rp" required placeholder="Write a message…"></textarea><div><button class="btn" type="submit">Send</button></div></form>
+  </div></main>`;
+}
+
+/* ---------- coach screens ---------- */
+const students=()=>S.users.filter(p=>!isCoach(p));
+function playerOpts(taken,levels){
+  return students().filter(p=>!taken.has(p.id)).sort((a,b)=>(levels.includes(b.level)-levels.includes(a.level))||LEVELS.indexOf(a.level)-LEVELS.indexOf(b.level)||a.name.localeCompare(b.name))
+    .map(p=>`<option value="${p.id}">${esc(p.name)} (${p.level||'no level'})</option>`).join('');
+}
+const nameChip=(id,act,data)=>{const p=P(id);return `<span class="chip">${esc(p?.name||'Removed account')} <span class="lv">${p?.level||'–'}</span><button class="x" data-act="${act}" ${data} data-uid="${id}" aria-label="Remove ${esc(p?.name||'player')}">×</button></span>`};
+function coachSessions(){
+  let list=occurrences();
+  if(view.filter!=='all') list=list.filter(o=>o.w.id===view.filter);
+  const weekly=S.weekly.slice().sort(byWeek);
+  const card=o=>{
+    const taken=new Set();o.w.courts.forEach((_,i)=>{const e=peek(ck(o,i));e.in.forEach(x=>taken.add(x));e.wait.forEach(x=>taken.add(x))});
+    const rows=o.w.courts.map((c,i)=>{
+      const e=peek(ck(o,i)), d=`data-key="${o.key}" data-c="${i}"`;
+      const add=`<select data-act="add" ${d} aria-label="Add a player to Court ${i+1}"><option value="">Add player…</option>${playerOpts(taken,c.levels||[])}</select>`;
+      const names=`<div class="cnames"><div class="chips">${e.in.map(id=>nameChip(id,'remove',d)).join('')||'<span class="fine">No bookings yet</span>'}</div>
+        ${e.wait.length?`<span class="fine">Waitlist: ${e.wait.map((id,k)=>`${k+1}. ${esc(P(id)?.name||'Removed account')}`).join(' · ')}</span>`:''}</div>`;
+      return courtRow(o,i,add,false,names);
+    }).join('');
+    return sessCard(o,rows);
+  };
+  return `<div class="toolbar"><select id="filter" data-act="filter" aria-label="Filter by session"><option value="all">All sessions</option>${weekly.map(w=>`<option value="${w.id}" ${view.filter===w.id?'selected':''}>${DAYS[w.dow]} ${span(w)} · ${esc(w.title)}</option>`).join('')}</select>
+    <span class="sp"></span><span class="fine">Next ${WINDOW_DAYS/7} weeks</span></div>
+    ${dayList(list,card,'No sessions in the next three weeks. Add a weekly session first.')}`;
+}
+function coachPlayers(){
+  const list=students().sort((a,b)=>(!!a.wantsCoach===!!b.wantsCoach?0:a.wantsCoach?-1:1)||LEVELS.indexOf(a.level)-LEVELS.indexOf(b.level)||a.name.localeCompare(b.name));
+  const coaches=S.users.filter(isCoach);
+  return `<p class="muted">Students appear here after they create an account and verify their email. Set their level so they can book courts and matches.</p>
+    ${coaches.length?`<p class="fine">Coaches: ${coaches.map(c=>esc(c.name)).join(', ')}</p>`:''}
+    <div class="tblwrap"><table><thead><tr><th>Player</th><th>Level</th><th>Can book</th><th></th><th></th></tr></thead><tbody>
+    ${list.map(p=>{
+      const sees=S.weekly.slice().sort(byWeek).filter(w=>w.courts.some(c=>(c.levels||[]).includes(p.level))).map(w=>`${DAYS[w.dow].slice(0,3)} ${clock(w.time)}`).join(', ')||'Nothing yet';
+      const coachCell=p.wantsCoach?(view.confirm==='coach:'+p.id?`<span class="confirm">Give ${esc(p.name)} coach access? <button class="btn sm" data-act="makecoach-yes" data-id="${p.id}">Make coach</button><button class="btn sm ghost" data-act="no">Not now</button></span>`
+        :`<span class="pill warn">Asked for coach access</span> <button class="link" data-act="makecoach" data-id="${p.id}">Review</button>`):'';
+      return `<tr><td><b>${esc(p.name)}</b>${p.level?'':' <span class="pill warn">Needs a level</span>'}<div class="fine">${[p.email,p.phone].filter(Boolean).map(esc).join(' · ')}</div></td>
+      <td><select data-act="level" data-id="${p.id}" aria-label="Level for ${esc(p.name)}"><option value="" ${p.level?'':'selected'}>Not set</option>${LEVELS.map(l=>`<option ${p.level===l?'selected':''}>${l}</option>`).join('')}</select></td>
+      <td class="${sees==='Nothing yet'?'muted':''}">${sees}</td>
+      <td><button class="link" data-act="msgto" data-id="${p.id}">Message</button></td>
+      <td>${coachCell}</td></tr>`}).join('')||'<tr><td colspan="5" class="muted">No students yet. Share the app link so they can create accounts.</td></tr>'}
+    </tbody></table></div>`;
+}
+function coachWeekly(){
+  const list=S.weekly.slice().sort(byWeek);
+  return `<p class="muted">Each weekly session has its courts. Every court is a group of ${PER_COURT} players, and you choose which levels can book it. Changes save straight away.</p>
+  <div class="slots">${list.map(w=>`<section class="slotcard">
+    <div><h3>${esc(w.title)}</h3><p class="fine">${DAYS[w.dow]} · ${span(w)}</p></div>
+    <div class="field"><label class="lbl" for="n-${w.id}">Session name</label><input type="text" id="n-${w.id}" value="${esc(w.title)}" data-act="w" data-f="title" data-id="${w.id}"></div>
+    <div class="g">
+      <div class="field"><label class="lbl" for="d-${w.id}">Day</label><select id="d-${w.id}" data-act="w" data-f="dow" data-id="${w.id}">${[1,2,3,4,5,6,0].map(d=>`<option value="${d}" ${w.dow===d?'selected':''}>${DAYS[d]}</option>`).join('')}</select></div>
+      <div class="field"><label class="lbl" for="t-${w.id}">Start</label><input type="time" id="t-${w.id}" value="${w.time}" data-act="w" data-f="time" data-id="${w.id}"></div>
+      <div class="field"><label class="lbl" for="l-${w.id}">Length (min)</label><input type="number" min="30" max="240" step="5" id="l-${w.id}" value="${w.dur}" data-act="w" data-f="dur" data-id="${w.id}"></div>
+      <div class="field"><label class="lbl" for="pr-${w.id}">Price per person (AED)</label><input type="number" min="0" id="pr-${w.id}" value="${w.price}" data-act="w" data-f="price" data-id="${w.id}"></div>
+    </div>
+    ${w.courts.map((c,i)=>`<div class="ccfg"><b>Court ${i+1}</b>
+      <div class="checks">${LEVELS.map(l=>`<label><input type="checkbox" data-act="courtlv" data-id="${w.id}" data-c="${i}" value="${l}" ${(c.levels||[]).includes(l)?'checked':''}>${l}</label>`).join('')}</div>
+      ${i===w.courts.length-1&&w.courts.length>1?(view.confirm==='c:'+w.id?`<span class="confirm">Remove Court ${i+1} and its bookings? <button class="btn sm danger" data-act="delc-yes" data-id="${w.id}">Remove</button><button class="btn sm ghost" data-act="no">Keep</button></span>`:`<button class="link danger" data-act="delc" data-id="${w.id}">Remove court</button>`):''}</div>`).join('')}
+    <div class="toolbar"><button class="link" data-act="addc" data-id="${w.id}">Add a court</button><span class="sp"></span>
+      ${view.confirm==='w:'+w.id?`<span class="confirm">Remove this session and its bookings? <button class="btn sm danger" data-act="delw-yes" data-id="${w.id}">Remove</button><button class="btn sm ghost" data-act="no">Keep</button></span>`:`<button class="link danger" data-act="delw" data-id="${w.id}">Remove session</button>`}</div>
+  </section>`).join('')}</div>
+  <div class="toolbar"><button class="btn outline" data-act="addw">Add a weekly session</button>${list.length?'':'<button class="link" data-act="seed">Set up the default Monday, Wednesday and Friday sessions</button>'}</div>`;
+}
+function coachMatches(){
+  const t=new Date(Date.now()+DAY);
+  const card=m=>{
+    const taken=new Set([...m.in,...m.wait]), d=`data-id="${m.id}"`;
+    const add=`<select data-act="madd" ${d} aria-label="Add a player"><option value="">Add player…</option>${playerOpts(taken,m.levels)}</select>`;
+    const extra=`<div class="cnames"><div class="chips">${m.in.map(id=>nameChip(id,'mremove',d)).join('')||'<span class="fine">No bookings yet</span>'}</div>
+      ${m.wait.length?`<span class="fine">Waitlist: ${m.wait.map((id,k)=>`${k+1}. ${esc(P(id)?.name||'Removed account')}`).join(' · ')}</span>`:''}
+      <div>${view.confirm==='m:'+m.id?`<span class="confirm">Cancel this match? Booked players get a message. <button class="btn sm danger" data-act="mcx-yes" ${d}>Cancel match</button><button class="btn sm ghost" data-act="no">Keep</button></span>`:`<button class="link danger" data-act="mcx" ${d}>Cancel match</button>`}</div></div>`;
+    return matchCard(m,add,false,extra);
+  };
+  return `<form class="slotcard" id="newmatch">
+      <h3>Create a coach match</h3>
+      <div class="field"><label class="lbl" for="nm-title">Name</label><input type="text" id="nm-title" value="Coach match"></div>
+      <div class="g">
+        <div class="field"><label class="lbl" for="nm-date">Date</label><input type="date" id="nm-date" value="${ymd(t)}" min="${ymd(new Date())}" required></div>
+        <div class="field"><label class="lbl" for="nm-time">Start</label><input type="time" id="nm-time" value="09:00" required></div>
+        <div class="field"><label class="lbl" for="nm-dur">Length (min)</label><input type="number" id="nm-dur" min="30" max="240" step="5" value="90"></div>
+        <div class="field"><label class="lbl" for="nm-spots">Player spots</label><select id="nm-spots">${[1,2,3,4].map(n=>`<option ${n===3?'selected':''}>${n}</option>`).join('')}</select></div>
+        <div class="field"><label class="lbl" for="nm-price">Price per person (AED)</label><input type="number" id="nm-price" min="0" value="200"></div>
+      </div>
+      <p class="fine">With 3 player spots, the coach plays as the 4th player.</p>
+      <div class="field"><span class="lbl">Levels that can book it</span><div class="checks" id="nm-lv">${LEVELS.map(l=>`<label><input type="checkbox" id="nm-lv-${l}" value="${l}">${l}</label>`).join('')}</div></div>
+      <p class="err" id="nm-err" role="alert" hidden></p>
+      <div><button class="btn" type="submit" id="nm-go">Create match and message students</button></div>
+    </form>
+    <h2>Upcoming matches</h2>
+    ${dayList(upcomingMatches().map(m=>({start:mStart(m),m})),o=>card(o.m),'No upcoming coach matches.')}`;
+}
+function coachMessages(){
+  const list=students().sort((a,b)=>a.name.localeCompare(b.name));
+  const sel=view.msgTo||'all';
+  const opts=`<option value="all" ${sel==='all'?'selected':''}>All students</option>
+    <optgroup label="By level">${LEVELS.map(l=>`<option value="lv:${l}" ${sel==='lv:'+l?'selected':''}>Level ${l}</option>`).join('')}</optgroup>
+    <optgroup label="One student">${list.map(p=>`<option value="p:${p.id}" ${sel==='p:'+p.id?'selected':''}>${esc(p.name)} (${p.level||'no level'})</option>`).join('')}</optgroup>`;
+  const msgs=S.messages.slice().sort((a,b)=>b.at-a.at).slice(0,80);
+  const unread=msgs.filter(m=>m.to?.type==='coaches'&&!(m.read||[]).includes(me.id));
+  const ids=new Set(unread.map(m=>m.id));
+  markRead(unread);
+  return `<form class="slotcard" id="compose">
+      <h3>Send a message</h3>
+      <div class="field"><label class="lbl" for="ms-to">To</label><select id="ms-to">${opts}</select></div>
+      <div class="field"><label class="lbl" for="ms-text">Message</label><textarea id="ms-text" required placeholder="e.g. Wednesday courts start at 10:00 AM this week."></textarea></div>
+      <p class="err" id="ms-err" role="alert" hidden></p>
+      <div><button class="btn" type="submit" id="ms-go">Send</button></div>
+    </form>
+    <h2>All messages</h2>
+    <div class="feed">${msgs.map(m=>{
+      const t=m.to||{}, reply=t.type==='coaches'?`<button class="link" data-act="replyto" data-id="${m.from}">Reply</button>`:'';
+      const readInfo=t.type==='player'?((m.read||[]).includes(t.id)?'Read':'Not read yet'):t.type==='coaches'?'From a student':`Read by ${(m.read||[]).filter(x=>x!==m.by&&x!==m.from).length}`;
+      return `<div class="msg${ids.has(m.id)?' unread':''}">
+        <div class="msg-h"><span class="who">${esc(senderName(m))}</span>${m.from===SYSTEM?'<span class="pill">Automatic</span>':''}<span class="fine">to ${toLabel(t)} · ${stamp(m.at)}</span></div>
+        <p>${nl(m.text)}</p>
+        <div class="msg-f"><span class="fine">${readInfo}</span>${reply}</div>
+      </div>`}).join('')||'<p class="muted">No messages yet.</p>'}</div>`;
+}
+function screenCoach(){
+  const body=({sessions:coachSessions,players:coachPlayers,weekly:coachWeekly,matches:coachMatches,messages:coachMessages}[view.tab]||coachSessions)();
+  const unread=unreadFor(me), asks=students().filter(p=>p.wantsCoach).length, nolevel=students().filter(p=>!p.level).length;
+  return `<main class="gut"><div class="wrap stack">
+    <div class="hero"><p class="eyebrow">Coach view</p><h1>Organise the academy</h1></div>
+    <nav class="tabs">${[['sessions','Bookings'],['players','Players & levels'+((asks+nolevel)?` (${asks+nolevel})`:'')],['weekly','Weekly sessions'],['matches','Coach matches'],['messages','Messages'+(unread?` (${unread})`:'')]].map(([k,l])=>`<button class="tab" data-act="tab" data-tab="${k}" aria-current="${view.tab===k}">${l}</button>`).join('')}</nav>
+    ${body}
+  </div></main>`;
+}
+
+/* ---------- sign-in screens ---------- */
+const badge='<img class="signbadge" src="badge.png" alt="CM Padel Academy" width="150" height="150">';
+function screenSignin(){
+  return `<main class="signin"><div class="signwrap">${badge}
+    <form class="signcard" id="signin" novalidate>
+      <div><h1>Sign in</h1><p class="muted">Book your sessions at CM Padel Academy.</p></div>
+      ${view.note?`<p class="${view.noteKind==='err'?'err':'ok-note'}" role="status">${esc(view.note)}</p>`:''}
+      <div class="field"><label class="lbl" for="si-email">Email</label>
+        <input type="email" id="si-email" autocomplete="username" autocapitalize="off" spellcheck="false" value="${esc(view.prefill)}" placeholder="you@example.com" required></div>
+      <div class="field"><label class="lbl" for="si-pw">Password</label>
+        <div class="pw"><input type="password" id="si-pw" autocomplete="current-password" required><button type="button" class="link" data-act="showpw" data-for="si-pw" aria-controls="si-pw">Show</button></div></div>
+      <p class="err" id="si-err" role="alert" hidden></p>
+      <button class="btn wide" type="submit" id="si-go">Sign in</button>
+      <p class="fine"><button type="button" class="link" data-act="go" data-s="forgot">Forgot your password?</button></p>
+      <p class="fine">New to the academy? <button type="button" class="link" data-act="go" data-s="signup">Create an account</button></p>
+    </form>
+  </div></main>`;
+}
+function screenSignup(){
+  return `<main class="signin"><div class="signwrap">${badge}
+    <form class="signcard" id="signup" novalidate>
+      <div><h1>Create an account</h1><p class="muted">We'll email you a link to confirm your address.</p></div>
+      <div class="field"><span class="lbl" id="role-l">I am a</span>
+        <div class="roles" role="radiogroup" aria-labelledby="role-l">
+          <label class="role"><input type="radio" name="role" id="su-r-student" value="student" checked>Student</label>
+          <label class="role"><input type="radio" name="role" id="su-r-coach" value="coach">Coach</label>
+        </div>
+        <span class="fine">Coach accounts start as a request. An existing coach approves it.</span></div>
+      <div class="field"><label class="lbl" for="su-name">Full name</label><input type="text" id="su-name" autocomplete="name" required></div>
+      <div class="field"><label class="lbl" for="su-email">Email</label><input type="email" id="su-email" autocomplete="email" autocapitalize="off" spellcheck="false" required></div>
+      <div class="field"><label class="lbl" for="su-phone">Phone number <span class="opt-l">(optional)</span></label><input type="tel" id="su-phone" autocomplete="tel" placeholder="05X XXX XXXX"></div>
+      <div class="field"><label class="lbl" for="su-pw">Password</label>
+        <div class="pw"><input type="password" id="su-pw" autocomplete="new-password" required><button type="button" class="link" data-act="showpw" data-for="su-pw" aria-controls="su-pw">Show</button></div>
+        <span class="fine">At least 8 characters.</span></div>
+      <p class="err" id="su-err" role="alert" hidden></p>
+      <button class="btn wide" type="submit" id="su-go">Create account</button>
+      <p class="fine">Already have an account? <button type="button" class="link" data-act="go" data-s="signin">Sign in</button></p>
+    </form>
+  </div></main>`;
+}
+function screenVerify(){
+  const email=auth.currentUser?.email||'';
+  return `<main class="signin"><div class="signwrap">${badge}
+    <div class="signcard">
+      <div><h1>Check your email</h1><p class="muted">We sent a link to <b>${esc(email)}</b>. Tap it to confirm your email address, then come back here.</p></div>
+      <button class="btn wide" data-act="verified" id="vf-go">I've confirmed my email</button>
+      <div class="toolbar"><button class="link" data-act="resendlink">Send the email again</button><span class="sp"></span><button class="link" data-act="signout">Use a different account</button></div>
+      <p class="fine">Can't find it? Check your spam or junk folder.</p>
+    </div>
+  </div></main>`;
+}
+function screenForgot(){
+  return `<main class="signin"><div class="signwrap">${badge}
+    <form class="signcard" id="forgot" novalidate>
+      <div><h1>Reset your password</h1><p class="muted">Enter your email and we'll send you a link to choose a new password.</p></div>
+      <div class="field"><label class="lbl" for="fp-email">Email</label><input type="email" id="fp-email" autocomplete="username" autocapitalize="off" spellcheck="false" value="${esc(view.prefill)}" required></div>
+      <p class="err" id="fp-err" role="alert" hidden></p>
+      <button class="btn wide" type="submit" id="fp-go">Send reset link</button>
+      <p class="fine"><button type="button" class="link" data-act="go" data-s="signin">Back to sign in</button></p>
+    </form>
+  </div></main>`;
+}
+
+/* ---------- render ---------- */
+const PUBLIC=['signin','signup','verify','forgot','boot'];
+function keepForm(){
+  const app=document.getElementById('app'), vals={}, errs={};
+  app.querySelectorAll('form input[id], form textarea[id], form select[id]').forEach(el=>{if(el.dataset.act)return;vals[el.id]=(el.type==='checkbox'||el.type==='radio')?{c:el.checked}:{v:el.value}});
+  app.querySelectorAll('.err[id]:not([hidden])').forEach(el=>errs[el.id]=el.textContent);
+  const a=document.activeElement, focus=a&&a.id&&app.contains(a)?{id:a.id,s:a.selectionStart,e:a.selectionEnd}:null;
+  return {vals,errs,focus};
+}
+function restoreForm(k){
+  for(const [id,x] of Object.entries(k.vals)){const el=document.getElementById(id);if(!el)continue;if('c' in x)el.checked=x.c;else el.value=x.v}
+  for(const [id,t] of Object.entries(k.errs)){const el=document.getElementById(id);if(el){el.textContent=t;el.hidden=false}}
+  if(k.focus){const el=document.getElementById(k.focus.id);if(el){el.focus({preventScroll:true});try{if(k.focus.s!=null)el.setSelectionRange(k.focus.s,k.focus.e)}catch(e){}}}
+}
+function render(opts={}){
+  const app=document.getElementById('app');
+  if(view.screen==='boot'){app.innerHTML='';return}
+  if(!me&&!PUBLIC.includes(view.screen)) view.screen='signin';
+  if(me&&PUBLIC.includes(view.screen)) view.screen=isCoach(me)?'coach':'training';
+  if(me&&isCoach(me)&&['training','group','matches','inbox'].includes(view.screen)) view.screen='coach';
+  if(me&&!isCoach(me)&&view.screen==='coach') view.screen='training';
+  const kept=opts.keep?keepForm():null;
+  const screen={signin:screenSignin,signup:screenSignup,verify:screenVerify,forgot:screenForgot,training:screenTraining,group:screenGroup,matches:screenMatches,inbox:screenInbox,coach:screenCoach}[view.screen];
+  const body=screen();
+  app.innerHTML=(me?header():'')+body;
+  if(kept) restoreForm(kept);
+}
+let queued=false;
+function refresh(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;render({keep:true})})}
+function go(screen){if(screen!=='signin')view.note=null;view.screen=screen;view.confirm=null;render();window.scrollTo(0,0)}
+let loaderDone=false;
+function hideLoader(){
+  if(loaderDone)return;loaderDone=true;
+  const el=document.getElementById('loader');
+  const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const wait=Math.max(0,(reduce?600:1700)-performance.now());
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>{el.hidden=true},380)},wait);
+}
+const busy=(id,on,label)=>{const b=document.getElementById(id);if(b){b.disabled=on;if(label)b.textContent=label}};
+
+/* ---------- events ---------- */
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const a=b.dataset.act, o=b.dataset.key?occ(b.dataset.key):null, i=+b.dataset.c, w=b.dataset.id?W(b.dataset.id):null, m=b.dataset.id?MATCH(b.dataset.id):null;
+  switch(a){
+    case 'home': return go(isCoach(me)?'coach':'training');
+    case 'signout': await signOut(auth);view.screen='signin';toast('Signed out.');return;
+    case 'showpw': {const f=document.getElementById(b.dataset.for);const show=f.type==='password';f.type=show?'text':'password';b.textContent=show?'Hide':'Show';return}
+    case 'go': return go(b.dataset.s);
+    case 'verified': {
+      const u=auth.currentUser;if(!u)return go('signin');
+      busy('vf-go',true,'Checking…');
+      try{await u.reload();const cu=auth.currentUser;
+        if(cu.emailVerified){await cu.getIdToken(true);await enter(cu)}
+        else{busy('vf-go',false,'I\'ve confirmed my email');toast('Your email isn\'t confirmed yet. Tap the link in the email first.')}
+      }catch(x){busy('vf-go',false,'I\'ve confirmed my email');toast(friendly(x))}
+      return;
+    }
+    case 'resendlink': {const u=auth.currentUser;if(!u)return;try{await sendEmailVerification(u);toast(`Email sent again to ${u.email}.`)}catch(x){toast(friendly(x))}return}
+    case 'tab': view.tab=b.dataset.tab;view.confirm=null;render();return;
+    case 'inbox': return go('inbox');
+    case 'book': if(o)bookCourt(o,i);return;
+    case 'cancel': if(o)cancelCourt(o,i);return;
+    case 'leave': if(o)leaveCourt(o,i);return;
+    case 'remove': if(o)coachRemove(o,i,b.dataset.uid);return;
+    case 'mbook': if(m)bookMatch(m);return;
+    case 'mcancel': if(m)cancelMatch(m);return;
+    case 'mleave': if(m)leaveMatch(m);return;
+    case 'mremove': if(m)coachMatchRemove(m,b.dataset.uid);return;
+    case 'mcx': view.confirm='m:'+b.dataset.id;break;
+    case 'mcx-yes': if(m){view.confirm=null;
+      const r=await run(updateDoc(doc(db,'matches',m.id),{cancelled:true}).then(()=>({ok:1,msg:'Match cancelled. Players got a message.'})));
+      if(r?.ok)[...m.in,...m.wait].forEach(id=>notify(id,`${mLabel(m)} has been cancelled by ${me.name}.`))}
+      break;
+    case 'msgto': view.msgTo='p:'+b.dataset.id;view.tab='messages';view.confirm=null;render();window.scrollTo(0,0);document.getElementById('ms-text')?.focus();return;
+    case 'replyto': view.msgTo='p:'+b.dataset.id;render();window.scrollTo(0,0);document.getElementById('ms-text')?.focus();return;
+    case 'makecoach': view.confirm='coach:'+b.dataset.id;break;
+    case 'makecoach-yes': {const p=P(b.dataset.id);view.confirm=null;
+      const r=await run(updateDoc(doc(db,'users',b.dataset.id),{role:'coach',wantsCoach:false,level:null}).then(()=>({ok:1,msg:`${p?.name} is now a coach.`})));
+      if(r?.ok) notify(b.dataset.id,`${me.name} gave you coach access. The coach view opens automatically the next time the app refreshes.`);
+      break}
+    case 'addc': if(w) run(updateDoc(doc(db,'weekly',w.id),{courts:[...w.courts,{levels:[...(w.courts[w.courts.length-1]?.levels||['D+'])]}]}).then(()=>({msg:`Court ${w.courts.length+1} added.`})));return;
+    case 'delc': view.confirm='c:'+b.dataset.id;break;
+    case 'delc-yes': if(w&&w.courts.length>1){view.confirm=null;const last=w.courts.length-1;
+      run(updateDoc(doc(db,'weekly',w.id),{courts:w.courts.slice(0,last)}).then(()=>deleteBookings(w.id,last)).then(()=>({msg:'Court removed.'})))}
+      break;
+    case 'delw': view.confirm='w:'+b.dataset.id;break;
+    case 'delw-yes': if(w){view.confirm=null;run(deleteDoc(doc(db,'weekly',w.id)).then(()=>deleteBookings(w.id,null)).then(()=>({msg:'Session removed.'})))}break;
+    case 'addw': run(addDoc(collection(db,'weekly'),{title:'Group training',dow:2,time:'09:00',dur:90,price:135,courts:[{levels:['D+']},{levels:['D+']}]}).then(()=>({msg:'Session added. Set its day, time and courts.'})));return;
+    case 'seed': seeded=true;seedWeekly();return;
+    case 'no': view.confirm=null;break;
+    default: return;
+  }
+  render({keep:true});
+});
+document.addEventListener('change',async e=>{
+  const t=e.target, a=t.dataset.act;if(!a)return;
+  if(a==='add'&&t.value){const o=occ(t.dataset.key);if(o)coachAdd(o,+t.dataset.c,t.value);t.value='';return}
+  if(a==='madd'&&t.value){const m=MATCH(t.dataset.id);if(m)coachMatchAdd(m,t.value);t.value='';return}
+  if(a==='level'){const p=P(t.dataset.id),lv=t.value||null;
+    const r=await run(updateDoc(doc(db,'users',t.dataset.id),{level:lv}).then(()=>({ok:1,msg:lv?`${p?.name} is now ${lv}.`:`Level cleared for ${p?.name}.`})));
+    if(r?.ok&&lv) notify(t.dataset.id,`${me.name} set your level to ${lv}. You can now book ${lv} courts and coach matches.`);
+    return}
+  if(a==='w'){const w=W(t.dataset.id),f=t.dataset.f;let v;
+    if(f==='title'){v=t.value.trim();if(!v)return}
+    else if(f==='time'){if(!/^\d\d:\d\d$/.test(t.value))return;v=t.value}
+    else if(f==='dur') v=Math.max(30,Math.min(240,parseInt(t.value)||90));
+    else v=Math.max(0,+t.value||0);
+    run(updateDoc(doc(db,'weekly',w.id),{[f]:v}));return}
+  if(a==='courtlv'){const w=W(t.dataset.id),ci=+t.dataset.c;
+    const courts=w.courts.map((c,i)=>i!==ci?c:{levels:LEVELS.filter(l=>l===t.value?t.checked:(c.levels||[]).includes(l))});
+    run(updateDoc(doc(db,'weekly',w.id),{courts}));return}
+  if(a==='filter'){view.filter=t.value;render();return}
+  if(a==='showlocked'){view.showLocked=t.checked;render();return}
+});
+document.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const f=e.target, val=id=>document.getElementById(id).value.trim();
+  const showErr=(id,msg)=>{const el=document.getElementById(id);if(el){el.textContent=msg;el.hidden=false}};
+  if(f.id==='signin'){
+    const email=val('si-email').toLowerCase(), pw=document.getElementById('si-pw').value;
+    if(!email||!pw) return showErr('si-err','Enter your email and your password.');
+    busy('si-go',true,'Signing in…');view.prefill=email;
+    try{await signInWithEmailAndPassword(auth,email,pw);view.note=null}
+    catch(x){busy('si-go',false,'Sign in');showErr('si-err',friendly(x))}
+    return;
+  }
+  if(f.id==='signup'){
+    const name=val('su-name'), email=val('su-email').toLowerCase(), phone=val('su-phone'), pw=document.getElementById('su-pw').value;
+    const wantsCoach=document.getElementById('su-r-coach').checked;
+    if(!name) return showErr('su-err','Enter your full name.');
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return showErr('su-err','Enter a valid email address, like name@example.com.');
+    if(phone&&phone.replace(/\D/g,'').length<7) return showErr('su-err','Enter a valid phone number, or leave it empty.');
+    if(pw.length<8) return showErr('su-err','Use at least 8 characters for your password.');
+    busy('su-go',true,'Creating account…');
+    try{
+      const cred=await createUserWithEmailAndPassword(auth,email,pw);
+      await setDoc(doc(db,'users',cred.user.uid),{name,email,phone,role:'student',level:null,wantsCoach,createdAt:Date.now()});
+      await sendEmailVerification(cred.user);
+      view.screen='verify';render();window.scrollTo(0,0);
+    }catch(x){busy('su-go',false,'Create account');showErr('su-err',friendly(x))}
+    return;
+  }
+  if(f.id==='forgot'){
+    const email=val('fp-email').toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return showErr('fp-err','Enter a valid email address, like name@example.com.');
+    busy('fp-go',true,'Sending…');
+    try{await sendPasswordResetEmail(auth,email);view.prefill=email;view.note='If there\'s an account for that email, a reset link is on its way. Check your inbox and spam folder.';view.noteKind='ok';view.screen='signin';render()}
+    catch(x){busy('fp-go',false,'Send reset link');showErr('fp-err',friendly(x))}
+    return;
+  }
+  if(f.id==='reply'){
+    const t=val('rp');if(!t)return;
+    const r=await run(addDoc(collection(db,'messages'),{from:me.id,fromName:me.name,by:me.id,private:true,audience:['coaches','u:'+me.id],to:{type:'coaches'},text:t,at:Date.now(),read:[me.id]}).then(()=>({ok:1,msg:'Message sent to your coaches.'})));
+    if(r?.ok){document.getElementById('rp').value=''}
+    return;
+  }
+  if(f.id==='compose'){
+    const toV=document.getElementById('ms-to').value, t=val('ms-text');
+    if(!t) return showErr('ms-err','Write a message first.');
+    let to,audience,priv=false;
+    if(toV==='all'){to={type:'all'};audience=['all']}
+    else if(toV.startsWith('lv:')){to={type:'levels',levels:[toV.slice(3)]};audience=['lv:'+toV.slice(3)]}
+    else{const id=toV.slice(2);to={type:'player',id,name:P(id)?.name||''};audience=['u:'+id,'u:'+me.id];priv=true}
+    busy('ms-go',true,'Sending…');
+    const r=await run(addDoc(collection(db,'messages'),{from:me.id,fromName:me.name,by:me.id,private:priv,audience,to,text:t,at:Date.now(),read:[me.id]}).then(()=>({ok:1,msg:`Message sent to ${toLabel(to).replace(/&[^;]+;/g,'')}.`})));
+    busy('ms-go',false,'Send');
+    if(r?.ok){view.msgTo=toV;document.getElementById('ms-text').value=''}
+    return;
+  }
+  if(f.id==='newmatch'){
+    const g=id=>document.getElementById(id).value;
+    const levels=[...document.querySelectorAll('#nm-lv input:checked')].map(x=>x.value);
+    if(!/^\d{4}-\d\d-\d\d$/.test(g('nm-date'))||!/^\d\d:\d\d$/.test(g('nm-time'))) return showErr('nm-err','Pick a date and a start time.');
+    if(!levels.length) return showErr('nm-err','Pick at least one level so students can see the match.');
+    const m={title:g('nm-title').trim()||'Coach match',date:g('nm-date'),time:g('nm-time'),dur:Math.max(30,Math.min(240,parseInt(g('nm-dur'))||90)),
+      levels,spots:+g('nm-spots')||3,price:Math.max(0,+g('nm-price')||0),by:me.id,byName:me.name,in:[],wait:[],up:[],cancelled:false,createdAt:Date.now()};
+    if(mStart(m)<=Date.now()) return showErr('nm-err','Pick a time in the future.');
+    busy('nm-go',true,'Creating…');
+    try{
+      await addDoc(collection(db,'matches'),m);
+      await addDoc(collection(db,'messages'),{from:SYSTEM,fromName:ACADEMY,by:me.id,private:false,audience:levels.map(l=>'lv:'+l),to:{type:'levels',levels},
+        text:`New coach match with ${me.name}: ${mLabel(m)}. ${m.spots} spot${m.spots>1?'s':''} for ${range(levels)}. Book it under Coach match.`,at:Date.now(),read:[]});
+      toast('Match created. Students at those levels got a message.');
+      document.querySelectorAll('#nm-lv input').forEach(x=>x.checked=false);
+    }catch(x){toast(friendly(x))}
+    busy('nm-go',false,'Create match and message students');
+    return;
+  }
+});
+
+render();
+</script>
+</body>
+</html>
